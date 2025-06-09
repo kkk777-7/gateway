@@ -252,6 +252,25 @@ func TestTranslate(t *testing.T) {
 					},
 				},
 			)
+			resources.Services = append(resources.Services,
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "no-endpoints-service",
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "3.3.3.3",
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "http",
+								Port:       8080,
+								TargetPort: intstr.IntOrString{IntVal: 8080},
+								Protocol:   corev1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			)
 
 			// add otel-collector service
 			resources.Services = append(resources.Services,
