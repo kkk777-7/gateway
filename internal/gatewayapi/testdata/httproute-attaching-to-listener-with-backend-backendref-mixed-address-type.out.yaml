@@ -279,7 +279,7 @@ xdsIR:
       port: 10080
       routes:
       - directResponse:
-          statusCode: 503
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -292,7 +292,7 @@ xdsIR:
           name: ""
           prefix: /1
       - directResponse:
-          statusCode: 503
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -305,7 +305,7 @@ xdsIR:
           name: ""
           prefix: /3
       - directResponse:
-          statusCode: 503
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:

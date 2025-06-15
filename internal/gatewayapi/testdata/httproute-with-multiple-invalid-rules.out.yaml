@@ -141,7 +141,7 @@ xdsIR:
       port: 10080
       routes:
       - directResponse:
-          statusCode: 503
+          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -154,7 +154,7 @@ xdsIR:
           name: ""
           prefix: /foo
       - directResponse:
-          statusCode: 503
+          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -167,7 +167,7 @@ xdsIR:
           name: ""
           prefix: /bar
       - directResponse:
-          statusCode: 503
+          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:

@@ -580,7 +580,7 @@ xdsIR:
             - header4
             name: securitypolicy/default/policy-for-http-route-3--grpc-backendref
       - directResponse:
-          statusCode: 503
+          statusCode: 500
         hostname: www.qux.com
         isHTTP2: false
         metadata:

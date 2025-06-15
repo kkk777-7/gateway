@@ -221,6 +221,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		destName := irRouteDestinationName(httpRoute, ruleIdx)
 		allDs := []*ir.DestinationSetting{}
 		failedProcessDestination := false
+		failedProcessDestinationByNotFoundES := false
 		hasDynamicResolver := false
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		// process each backendRef, and calculate the destination settings for this rule
@@ -232,7 +233,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 					err.Reason(),
 				))
-				failedProcessDestination = true
+				// Check for custom error reason to return 503 only if no endpoint, according to gateway api specification.
+				if err.Reason() == status.RouteReasonEndpointSliceNotFound {
+					failedProcessDestinationByNotFoundES = true
+				} else {
+					failedProcessDestination = true
+				}
 				continue
 			}
 
@@ -261,17 +267,17 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			// If the route already has a direct response or redirect configured, then it was from a filter so skip
 			// processing any destinations for this route.
 			case irRoute.DirectResponse != nil || irRoute.Redirect != nil:
-			// return 503 if endpoint does not exist.
-			// the error is already added to the error list when processing the destination.
-			case failedProcessDestination && len(allDs) == 0:
-				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(503)),
-				}
 			// return 500 if any destination setting is invalid
 			// the error is already added to the error list when processing the destination
 			case failedProcessDestination:
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
+				}
+			// return 503 if endpoint does not exist.
+			// the error is already added to the error list when processing the destination.
+			case failedProcessDestinationByNotFoundES && len(allDs) == 0:
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(503)),
 				}
 			// return 500 if the weight of all the valid destination settings(endpoints list is not empty) is 0
 			case destination.ToBackendWeights().Valid == 0:
@@ -667,6 +673,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		destName := irRouteDestinationName(grpcRoute, ruleIdx)
 		allDs := []*ir.DestinationSetting{}
 		failedProcessDestination := false
+		failedProcessDestinationByNotFoundES := false
 
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		for i, backendRef := range rule.BackendRefs {
@@ -677,7 +684,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 					err.Reason(),
 				))
-				failedProcessDestination = true
+				// Check for custom error reason to return 503 only if no endpoint, according to gateway api specification.
+				if err.Reason() == status.RouteReasonEndpointSliceNotFound {
+					failedProcessDestinationByNotFoundES = true
+				} else {
+					failedProcessDestination = true
+				}
 				continue
 			}
 
@@ -701,17 +713,17 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			// If the route already has a direct response or redirect configured, then it was from a filter so skip
 			// processing any destinations for this route.
 			case irRoute.DirectResponse != nil || irRoute.Redirect != nil:
-			// return 503 if endpoint does not exist.
-			// the error is already added to the error list when processing the destination.
-			case failedProcessDestination && len(allDs) == 0:
-				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(503)),
-				}
 			// return 500 if any destination setting is invalid
 			// the error is already added to the error list when processing the destination
 			case failedProcessDestination:
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
+				}
+			// return 503 if endpoint does not exist.
+			// the error is already added to the error list when processing the destination.
+			case failedProcessDestinationByNotFoundES && len(allDs) == 0:
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(503)),
 				}
 			// return 500 if the weight of all the valid destination settings(endpoints list is not empty) is 0
 			case destination.ToBackendWeights().Valid == 0:
@@ -1535,7 +1547,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
 				fmt.Errorf("no ready endpoints for the related serviceImport %s/%s", backendNamespace, string(backendRef.Name)),
-				gwapiv1.RouteReasonBackendNotFound)
+				status.RouteReasonEndpointSliceNotFound)
 		}
 	} else {
 		// Fall back to Service ClusterIP routing
@@ -1589,7 +1601,7 @@ func (t *Translator) processServiceDestinationSetting(
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
 				fmt.Errorf("no ready endpoints for the related service %s/%s", backendNamespace, string(backendRef.Name)),
-				gwapiv1.RouteReasonBackendNotFound)
+				status.RouteReasonEndpointSliceNotFound)
 		}
 	} else {
 		// Fall back to Service ClusterIP routing
