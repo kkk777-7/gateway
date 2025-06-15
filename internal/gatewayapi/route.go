@@ -1405,8 +1405,10 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
-		ds = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
-
+		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		if err != nil {
+			return nil, err
+		}
 	case resource.KindService:
 		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		if err != nil {
@@ -1497,7 +1499,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 	protocol ir.AppProtocol,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
-) *ir.DestinationSetting {
+) (*ir.DestinationSetting, status.Error) {
 	var (
 		endpoints []*ir.DestinationEndpoint
 		addrType  *ir.DestinationAddressType
@@ -1520,6 +1522,11 @@ func (t *Translator) processServiceImportDestinationSetting(
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
 		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+		if len(endpoints) == 0 {
+			return nil, status.NewRouteStatusError(
+				fmt.Errorf("no ready endpoints for the related serviceImport %s/%s", backendNamespace, string(backendRef.Name)),
+				gwapiv1.RouteReasonBackendNotFound)
+		}
 	} else {
 		// Fall back to Service ClusterIP routing
 		backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
@@ -1535,7 +1542,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		Endpoints:   endpoints,
 		AddressType: addrType,
 		Metadata:    buildResourceMetadata(serviceImport, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
-	}
+	}, nil
 }
 
 func (t *Translator) processServiceDestinationSetting(
