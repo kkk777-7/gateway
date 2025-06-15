@@ -257,11 +257,16 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				Metadata: buildResourceMetadata(httpRoute, rule.Name),
 			}
 
-			// TODO: return 503 if has route has no ready endpoints.
 			switch {
 			// If the route already has a direct response or redirect configured, then it was from a filter so skip
 			// processing any destinations for this route.
 			case irRoute.DirectResponse != nil || irRoute.Redirect != nil:
+			// return 503 if endpoint does not exist.
+			// the error is already added to the error list when processing the destination.
+			case failedProcessDestination && len(allDs) == 0:
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(503)),
+				}
 			// return 500 if any destination setting is invalid
 			// the error is already added to the error list when processing the destination
 			case failedProcessDestination:
@@ -692,11 +697,16 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				Metadata: buildResourceMetadata(grpcRoute, rule.Name),
 			}
 
-			// TODO: return 503 if has route has no ready endpoints.
 			switch {
 			// If the route already has a direct response or redirect configured, then it was from a filter so skip
 			// processing any destinations for this route.
 			case irRoute.DirectResponse != nil || irRoute.Redirect != nil:
+			// return 503 if endpoint does not exist.
+			// the error is already added to the error list when processing the destination.
+			case failedProcessDestination && len(allDs) == 0:
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(503)),
+				}
 			// return 500 if any destination setting is invalid
 			// the error is already added to the error list when processing the destination
 			case failedProcessDestination:

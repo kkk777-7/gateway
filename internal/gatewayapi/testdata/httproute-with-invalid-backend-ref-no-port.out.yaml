@@ -117,7 +117,7 @@ xdsIR:
       port: 10080
       routes:
       - directResponse:
-          statusCode: 500
+          statusCode: 503
         hostname: '*'
         isHTTP2: false
         metadata:
