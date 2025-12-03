@@ -90,7 +90,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// 4. Finally, the policies targeting Gateways
 
 	// Build gateway policy maps, which are needed when processing the policies targeting xRoutes.
-	t.buildGatewayPolicyMap(backendTrafficPolicies, gateways, gatewayMap, gatewayPolicyMap)
+	t.buildGatewayBackendTrafficPolicyMap(backendTrafficPolicies, gateways, gatewayMap, gatewayPolicyMap)
 
 	// Process the policies targeting RouteRules
 	for _, currPolicy := range backendTrafficPolicies {
@@ -179,7 +179,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	return res
 }
 
-func (t *Translator) buildGatewayPolicyMap(
+func (t *Translator) buildGatewayBackendTrafficPolicyMap(
 	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	gateways []*GatewayContext,
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
