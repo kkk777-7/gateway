@@ -62,8 +62,11 @@ var HTTPRouteMixedBackendsTest = suite.ConformanceTest{
 			},
 		}
 
+		// The /mixed rule splits the traffic between the Service and the Backend ref, so
+		// asserting that each of them is reachable is all this can assert: see
+		// MakeRequestAndExpectResponseAtLeastOnce for why the consistency helper does not fit.
 		for _, res := range responses {
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, res)
+			MakeRequestAndExpectResponseAtLeastOnce(t, suite, gwAddr, res)
 		}
 	},
 }

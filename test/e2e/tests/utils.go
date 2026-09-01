@@ -1108,6 +1108,25 @@ func ExpectRequestTimeout(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 		})
 }
 
+// MakeRequestAndExpectResponseAtLeastOnce repeats the described request until one
+// response matches expected, including the backend that answered it.
+//
+// It is the counterpart of httputils.MakeRequestAndExpectEventuallyConsistentResponse
+// for a route rule that fans out across several backendRefs. That helper asks for
+// TimeoutConfig.RequiredConsecutiveSuccesses (3) consecutive matches and resets the
+// count on every mismatch, while Envoy translates such a rule into weighted Clusters
+// and picks between them per request: waiting for the same backend to answer three
+// times in a row is waiting for a coin to land on the same side three times. It
+// usually happens within the timeout, but not always, which is what makes these
+// tests flaky. When the assertion is only that a backend is reachable through the
+// rule, a single response from it proves that.
+func MakeRequestAndExpectResponseAtLeastOnce(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string, expected httputils.ExpectedResponse) {
+	t.Helper()
+
+	req := httputils.MakeRequest(t, &expected, gwAddr, "HTTP", "http")
+	httputils.WaitForConsistentResponse(t, suite.RoundTripper, req, expected, 1, suite.TimeoutConfig.MaxTimeToConsistency)
+}
+
 // TODO: remove this when the min version EG supported is v1.33
 func EnabledClusterTrustBundle() bool {
 	return enabledClusterTrustBundle == "true"

@@ -84,9 +84,11 @@ var HTTPRouteMixedProtocols = suite.ConformanceTest{
 			},
 		}
 
+		// The /mixed-protocols rule splits the traffic between the two backends, so
+		// asserting that each of them is reachable is all this can assert: see
+		// MakeRequestAndExpectResponseAtLeastOnce for why the consistency helper does not fit.
 		for _, res := range responses {
-			req := http.MakeRequest(t, &res, gwAddr, "HTTP", "http")
-			http.WaitForConsistentResponse(t, suite.RoundTripper, req, res, 1, suite.TimeoutConfig.MaxTimeToConsistency)
+			MakeRequestAndExpectResponseAtLeastOnce(t, suite, gwAddr, res)
 		}
 	},
 }
